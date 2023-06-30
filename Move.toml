@@ -1,0 +1,11 @@
+[package]
+name = "bank"
+version = "0.0.1"
+#published-at = "0x2c215fa97119f07ac3ea308f7e0320eb55c2b8e9cfcbc924ac26b95fb0ab8024"
+
+[dependencies]
+Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "framework/testnet" }
+
+[addresses]
+#bank = "0x2c215fa97119f07ac3ea308f7e0320eb55c2b8e9cfcbc924ac26b95fb0ab8024"
+bank = "0x0"

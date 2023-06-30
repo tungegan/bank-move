@@ -1,0 +1,93 @@
+module bank::bank{
+    use sui::object::{UID,Self};
+    use sui::tx_context::{TxContext,Self};
+    use sui::transfer;
+
+    struct Bank has key {
+	id: UID,
+	wallets_created: u64,
+    }
+
+    struct Wallet has key, store {
+	id: UID,
+	balance: u64,
+    }
+
+    struct User has key, store {
+	id: UID,
+	wallet: Wallet,
+	intended_address: address,
+    }
+
+    fun init(ctx: &mut TxContext) {
+	let bank = Bank{
+	    id: object::new(ctx),
+	    wallets_created: 0,
+	};
+
+	transfer::transfer(bank, tx_context::sender(ctx));
+    }
+
+    public entry fun create_wallet(_: &Bank,balance: u64, ctx: &mut TxContext) {
+	transfer::transfer(Wallet{id: object::new(ctx), balance,}, tx_context::sender(ctx));
+    }
+
+    /////////////////////////////////////          wrap              ///////////////////////////////////////////////////////////////////////////////////////////////
+    
+    public entry fun reqest_wallet(bank: &mut Bank, intended_address: address, wallet: Wallet, ctx: &mut TxContext) {
+	let user = User{
+	    id: object::new(ctx),
+	    wallet,
+	    intended_address,
+	};
+	bank.wallets_created = bank.wallets_created + 1;
+	transfer::transfer(user, intended_address);
+    }
+
+    public entry fun unpack_wallet(user: User, ctx: &mut TxContext) {
+	let User {
+	    id,
+	    wallet,
+	    intended_address: _,
+	} = user;
+
+	transfer::transfer(wallet, tx_context::sender(ctx));
+	object::delete(id);
+    }
+
+
+    ////////////////////////////////////        dynamic                /////////////////////////////////////////////////////////////////
+
+    public entry fun mutable_wallet(wallet: &mut Wallet) {
+	wallet.balance = wallet.balance + 1;
+    }
+
+    public fun add_wallet(user: &mut User, wallet: Wallet, name: vector<u8>) {
+	ofield::add(&mut user.id, name, wallet);
+    }
+
+    public entry fun mutate_wallet_via_user(user: &mut User, wallet_name: vector<u8>) {
+        mutable_wallet(ofield::borrow_mut<vector<u8>, Wallet>(
+            &mut user.id,
+            wallet_name,
+        ));
+    }
+
+    public entry fun delete_wallet(user: &mut User) {
+	let Wallet { id, count: _ } = ofield::remove<vector<u8>, Wallet>(
+            &mut user.id,
+            b"wallet",
+	);
+	object::delete(id);
+    }
+
+    public entry fun reclaim_wallet(user: &mut User, ctx: &mut TxContext) {
+	let wallet = ofield::remove<vector<u8>, Wallet>(
+            &mut user.id,
+            b"wallet",
+	);
+
+	transfer::transfer(wallet, tx_context::sender(ctx));
+    }
+
+}
